@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 
 function Card({ title, description }) {
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md">
-      <h3 className="font-bold text-lg">{title}</h3>
-      <p className="text-gray-700">{description}</p>
+    <div className="bg-gray-800 p-4 rounded-lg shadow-lg">
+      <h3 className="font-bold text-lg text-white">{title}</h3>
+      <p className="text-gray-300">{description}</p>
     </div>
   );
 }
@@ -29,6 +29,17 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [sessionId] = useState(Math.random().toString(36).substring(2));
   const messagesEndRef = useRef(null);
+
+  // Sample questions for the dropdown
+  const sampleQuestions = [
+    "What are your skills?",
+    "Tell me about your projects",
+    "Who are you?",
+    "How can I contact you?",
+    "What are your hobbies?",
+    "What is your work experience?",
+    "What is your education background?",
+  ];
 
   // Auto-scroll to the latest message
   const scrollToBottom = () => {
@@ -73,12 +84,37 @@ export default function Home() {
     scrollToBottom();
   };
 
+  // Handle dropdown selection
+  const handleQuestionSelect = (e) => {
+    const selectedQuestion = e.target.value;
+    if (selectedQuestion) {
+      setInput(selectedQuestion);
+      // Optionally send the message immediately
+      // sendMessage();
+    }
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      <header className="p-4 bg-blue-600 text-white text-center">
-        <h1 className="text-2xl font-bold">Portfolio Chatbot</h1>
+    <div className="flex flex-col h-screen bg-black">
+      <header className="p-4 bg-gray-900 text-white flex items-center justify-center space-x-4">
+        <h1 className="text-2xl font-bold">Ask anything about me</h1>
+        <select
+          onChange={handleQuestionSelect}
+          className="p-2 bg-gray-800 text-white border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Sample Questions"
+          defaultValue=""
+        >
+          <option value="" disabled>
+            Sample Questions
+          </option>
+          {sampleQuestions.map((question, index) => (
+            <option key={index} value={question}>
+              {question}
+            </option>
+          ))}
+        </select>
       </header>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-950">
         {messages.map((msg, index) => (
           <div
             key={index}
@@ -86,7 +122,7 @@ export default function Home() {
           >
             <div
               className={`max-w-xs p-3 rounded-lg ${
-                msg.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-white shadow'
+                msg.sender === 'user' ? 'bg-blue-700 text-white' : 'bg-gray-800 text-white shadow-lg'
               }`}
             >
               {renderMessage(msg)}
@@ -95,19 +131,19 @@ export default function Home() {
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <div className="p-4 bg-white border-t flex">
+      <div className="p-4 bg-gray-900 border-t border-gray-700 flex">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-          className="flex-1 p-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 p-2 bg-gray-800 text-white border border-gray-700 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Type your message..."
           aria-label="Chat input"
         />
         <button
           onClick={sendMessage}
-          className="p-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600"
+          className="p-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700"
         >
           Send
         </button>
