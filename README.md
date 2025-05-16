@@ -12,7 +12,7 @@ A sleek, interactive chatbot web application that showcases my full-stack develo
 
 ## 🚀 Demo
 
-Try the live chatbot at https://chatbot-pi-puce.vercel.app/
+Try the live chatbot at https://aboutmechatbot.vercel.app
 
 **Example Questions**:
 - “What are your skills?”
