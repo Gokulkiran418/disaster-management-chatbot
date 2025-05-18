@@ -89,13 +89,11 @@ export default function Home() {
     const selectedQuestion = e.target.value;
     if (selectedQuestion) {
       setInput(selectedQuestion);
-      // Optionally send the message immediately
-      // sendMessage();
     }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-black">
+    <div className="flex flex-col min-h-[100dvh] bg-black">
       <header className="p-4 bg-gray-900 text-white flex items-center justify-center space-x-4">
         <h1 className="text-2xl font-bold">Ask anything about me</h1>
         <select
@@ -131,7 +129,7 @@ export default function Home() {
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <div className="p-4 bg-gray-900 border-t border-gray-700 flex">
+      <div className="p-2 bg-gray-900 border-t border-gray-700 flex sticky bottom-0">
         <input
           type="text"
           value={input}
