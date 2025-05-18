@@ -29,6 +29,7 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [sessionId] = useState(Math.random().toString(36).substring(2));
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Sample questions for the dropdown
   const sampleQuestions = [
@@ -44,6 +45,13 @@ export default function Home() {
   // Auto-scroll to the latest message
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Scroll input into view when focused
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100); // Small delay to account for keyboard animation
   };
 
   // Start conversation with welcome message
@@ -94,8 +102,8 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-[100dvh] bg-black">
-      <header className="p-4 bg-gray-900 text-white flex items-center justify-center space-x-4">
-        <h1 className="text-2xl font-bold">Ask anything about me</h1>
+      <header className="p-2 bg-gray-900 text-white flex items-center justify-center space-x-4">
+        <h1 className="text-xl font-bold">Ask anything about me</h1>
         <select
           onChange={handleQuestionSelect}
           className="p-2 bg-gray-800 text-white border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -112,7 +120,7 @@ export default function Home() {
           ))}
         </select>
       </header>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-950">
+      <div className="flex-1 overflow-y-auto p-2 space-y-4 bg-gray-950">
         {messages.map((msg, index) => (
           <div
             key={index}
@@ -129,12 +137,14 @@ export default function Home() {
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <div className="p-2 bg-gray-900 border-t border-gray-700 flex sticky bottom-0">
+      <div className="p-2 bg-gray-900 border-t border-gray-700 flex sticky bottom-0 z-10">
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          onFocus={handleInputFocus}
           className="flex-1 p-2 bg-gray-800 text-white border border-gray-700 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Type your message..."
           aria-label="Chat input"
