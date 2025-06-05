@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 
 function Card({ title, description }) {
   return (
-    <div className="bg-gray-800 p-4 rounded-lg shadow-lg">
-      <h3 className="font-bold text-lg text-white">{title}</h3>
-      <p className="text-gray-300">{description}</p>
+    <div className="bg-gray-800 p-3 rounded-lg shadow-lg">
+      <h3 className="font-bold text-base text-white">{title}</h3>
+      <p className="text-gray-300 text-sm">{description}</p>
     </div>
   );
 }
@@ -51,7 +51,7 @@ export default function Home() {
   const handleInputFocus = () => {
     setTimeout(() => {
       inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100); // Small delay to account for keyboard animation
+    }, 100);
   };
 
   // Start conversation with welcome message
@@ -102,11 +102,11 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-[100dvh] bg-black">
-      <header className="p-2 bg-gray-900 text-white flex items-center justify-center space-x-4">
-        <h1 className="text-xl font-bold">Ask anything about me</h1>
+      <header className="p-2 bg-gray-900 text-white flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-2">
+        <h1 className="text-lg sm:text-xl font-bold text-center">Ask anything about me</h1>
         <select
           onChange={handleQuestionSelect}
-          className="p-2 bg-gray-800 text-white border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="p-1 text-sm bg-gray-800 text-white border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
           aria-label="Sample Questions"
           defaultValue=""
         >
@@ -127,7 +127,7 @@ export default function Home() {
             className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-xs p-3 rounded-lg ${
+              className={`max-w-[80%] sm:max-w-xs p-3 rounded-lg text-sm ${
                 msg.sender === 'user' ? 'bg-blue-700 text-white' : 'bg-gray-800 text-white shadow-lg'
               }`}
             >
@@ -145,7 +145,7 @@ export default function Home() {
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
           onFocus={handleInputFocus}
-          className="flex-1 p-2 bg-gray-800 text-white border border-gray-700 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 p-2 text-sm bg-gray-800 text-white border border-gray-700 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Type your message..."
           aria-label="Chat input"
         />
