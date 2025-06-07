@@ -103,7 +103,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-[100dvh] bg-black">
       <header className="p-2 bg-gray-900 text-white flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-2">
-        <h1 className="text-lg sm:text-xl font-bold text-center">Ask anything about me</h1>
+        <h1 className="text-lg sm:text-xl font-bold text-center">Ask anything about me (NLP by DialogFlow) </h1>
         <select
           onChange={handleQuestionSelect}
           className="p-1 text-sm bg-gray-800 text-white border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
