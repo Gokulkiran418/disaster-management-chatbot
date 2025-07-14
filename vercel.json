@@ -20,6 +20,5 @@
       "src": "/(.*)",
       "dest": "src/$1"
     }
-  ],
-  "excludeFiles": ["**/*.pyc", ".env", ".env.production", ".venv/**", "api/__pycache__/**"]
+  ]
 }
