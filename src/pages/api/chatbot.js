@@ -1,52 +1,43 @@
-import { SessionsClient } from '@google-cloud/dialogflow';
-
-// Initialize Dialogflow client with credentials from environment variable
-const sessionClient = new SessionsClient({
-  credentials: JSON.parse(process.env.DIALOGFLOW_CREDENTIALS),
-});
-
-const projectId = 'portfoliobot-fugx'; // Replace with your Dialogflow project ID
+import axios from 'axios';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { message, sessionId } = req.body;
-  const sessionPath = sessionClient.projectAgentSessionPath(projectId, sessionId);
-
-  let request;
-  if (message === '[START]') {
-    // Trigger welcome intent for the initial message
-    request = {
-      session: sessionPath,
-      queryInput: {
-        event: {
-          name: 'WELCOME',
-          languageCode: 'en-US',
-        },
-      },
-    };
-  } else {
-    // Handle user text input
-    request = {
-      session: sessionPath,
-      queryInput: {
-        text: {
-          text: message,
-          languageCode: 'en-US',
-        },
-      },
-    };
-  }
+  const { message, sessionId, disasterType } = req.body;
 
   try {
-    const responses = await sessionClient.detectIntent(request);
-    const result = responses[0].queryResult;
-    res.status(200).json({ messages: result.fulfillmentMessages });
+    if (message === '[START]') {
+      return res.status(200).json({
+        messages: [
+          {
+            text: {
+              text: 'Welcome to the Disaster Response Coordinator! Select a disaster type (e.g., Earthquake, Flood) and describe your needs (e.g., Evacuate 500 people).'
+            }
+          }
+        ]
+      });
+    }
+
+    if (!disasterType || !message) {
+      return res.status(400).json({ error: 'Missing disasterType or message' });
+    }
+
+    // Send request to FastAPI microservice
+    const response = await axios.post('http://localhost:8000/disaster-response', {
+      disaster_type: disasterType,
+      query: message,
+      session_id: sessionId
+    });
+
+    // Return agent outputs as chat messages
+    return res.status(200).json({
+      messages: response.data.messages
+    });
+
   } catch (error) {
-    console.error('Dialogflow Error:', error);
-    res.status(500).json({ error: 'Sorry, something went wrong. Please try again.' });
+    console.error('Error calling FastAPI microservice:', error.message);
+    return res.status(500).json({ error: 'Failed to process request' });
   }
 }
