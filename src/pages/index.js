@@ -1,46 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 
-function Card({ title, description }) {
-  return (
-    <div className="bg-gray-800 p-3 rounded-lg shadow-lg">
-      <h3 className="font-bold text-base text-white">{title}</h3>
-      <p className="text-gray-300 text-sm">{description}</p>
-    </div>
-  );
-}
-
 function renderMessage(msg) {
-  return msg.content.map((part, index) => {
-    if (part.text) {
-      return (
-        <div key={index} className={`p-2 ${msg.sender === 'user' ? 'text-right' : 'text-left'}`}>
-          {part.text.text}
-        </div>
-      );
-    } else if (part.card) {
-      return <Card key={index} title={part.card.title} description={part.card.subtitle} />;
-    }
-    return null;
-  });
+  // Handle varying message formats
+  const text = typeof msg.text === 'string' ? msg.text : msg.text?.text || 'No response available';
+  return text.split('\n').map((line, index) => (
+    <p key={index} className="text-sm">{line}</p>
+  ));
 }
 
 export default function Home() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [disasterType, setDisasterType] = useState('');
   const [sessionId] = useState(Math.random().toString(36).substring(2));
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Sample questions for the dropdown
-  const sampleQuestions = [
-    "What are your skills?",
-    "Tell me about your projects",
-    "Who are you?",
-    "How can I contact you?",
-    "What are your hobbies?",
-    "What is your work experience?",
-    "What is your education background?",
-  ];
+  // Disaster types for dropdown
+  const disasterTypes = ['Earthquake', 'Flood', 'Hurricane', 'Wildfire'];
 
   // Auto-scroll to the latest message
   const scrollToBottom = () => {
@@ -64,59 +41,52 @@ export default function Home() {
       });
       const data = await response.json();
       if (data.messages) {
-        setMessages([{ content: data.messages, sender: 'bot' }]);
+        setMessages(data.messages.map(msg => ({ ...msg, sender: 'bot' })));
       }
     };
     startConversation();
   }, [sessionId]);
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !disasterType) return;
 
-    const userMessage = { content: [{ text: { text: input } }], sender: 'user' };
+    const userMessage = { text: { text: input }, sender: 'user' };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
 
     const response = await fetch('/api/chatbot', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: input, sessionId }),
+      body: JSON.stringify({ message: input, sessionId, disasterType }),
     });
     const data = await response.json();
     if (data.messages) {
-      setMessages((prev) => [...prev, { content: data.messages, sender: 'bot' }]);
+      setMessages((prev) => [...prev, ...data.messages]);
     } else if (data.error) {
-      setMessages((prev) => [...prev, { content: [{ text: { text: data.error } }], sender: 'bot' }]);
+      setMessages((prev) => [...prev, { text: { text: data.error }, sender: 'bot' }]);
     }
 
     scrollToBottom();
   };
 
   // Handle dropdown selection
-  const handleQuestionSelect = (e) => {
-    const selectedQuestion = e.target.value;
-    if (selectedQuestion) {
-      setInput(selectedQuestion);
-    }
+  const handleDisasterSelect = (e) => {
+    setDisasterType(e.target.value);
   };
 
   return (
     <div className="flex flex-col min-h-[100dvh] bg-black">
       <header className="p-2 bg-gray-900 text-white flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-2">
-        <h1 className="text-lg sm:text-xl font-bold text-center">Ask anything about me (NLP by DialogFlow) </h1>
+        <h1 className="text-lg sm:text-xl font-bold text-center">Disaster Response Coordinator</h1>
         <select
-          onChange={handleQuestionSelect}
+          onChange={handleDisasterSelect}
+          value={disasterType}
           className="p-1 text-sm bg-gray-800 text-white border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
-          aria-label="Sample Questions"
-          defaultValue=""
+          aria-label="Disaster Types"
         >
-          <option value="" disabled>
-            Sample Questions
-          </option>
-          {sampleQuestions.map((question, index) => (
-            <option key={index} value={question}>
-              {question}
-            </option>
+          <option value="" disabled>Select Disaster Type</option>
+          {disasterTypes.map((type, index) => (
+            <option key={index} value={type}>{type}</option>
           ))}
         </select>
       </header>
@@ -128,9 +98,22 @@ export default function Home() {
           >
             <div
               className={`max-w-[80%] sm:max-w-xs p-3 rounded-lg text-sm ${
-                msg.sender === 'user' ? 'bg-blue-700 text-white' : 'bg-gray-800 text-white shadow-lg'
+                msg.sender === 'user'
+                  ? 'bg-blue-700 text-white'
+                  : msg.sender === 'planner'
+                  ? 'bg-green-700 text-white'
+                  : msg.sender === 'researcher'
+                  ? 'bg-purple-700 text-white'
+                  : msg.sender === 'logistics'
+                  ? 'bg-orange-700 text-white'
+                  : msg.sender === 'communicator'
+                  ? 'bg-teal-700 text-white'
+                  : 'bg-gray-800 text-white shadow-lg'
               }`}
             >
+              {msg.sender !== 'user' && (
+                <p className="text-xs font-bold capitalize">{msg.sender}</p>
+              )}
               {renderMessage(msg)}
             </div>
           </div>
@@ -146,12 +129,14 @@ export default function Home() {
           onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
           onFocus={handleInputFocus}
           className="flex-1 p-2 text-sm bg-gray-800 text-white border border-gray-700 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Type your message..."
+          placeholder="Type your disaster response query..."
           aria-label="Chat input"
+          disabled={!disasterType}
         />
         <button
           onClick={sendMessage}
-          className="p-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700"
+          className="p-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700 disabled:bg-gray-600"
+          disabled={!input.trim() || !disasterType}
         >
           Send
         </button>
