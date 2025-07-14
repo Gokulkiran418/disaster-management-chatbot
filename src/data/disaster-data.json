@@ -1,0 +1,22 @@
+{
+  "earthquake": {
+    "shelters": ["Shelter A: 1000 capacity, Downtown", "Shelter B: 500 capacity, Suburb"],
+    "supplies": ["1000 food packs", "200 tents", "500 blankets"],
+    "conditions": "Moderate aftershocks expected, roads partially blocked"
+  },
+  "flood": {
+    "shelters": ["Shelter C: 800 capacity, Riverside", "Shelter D: 600 capacity, Hilltop"],
+    "supplies": ["800 water bottles", "150 boats", "300 life jackets"],
+    "conditions": "Heavy rainfall, high water levels"
+  },
+  "hurricane": {
+    "shelters": ["Shelter E: 1200 capacity, Coast", "Shelter F: 400 capacity, Inland"],
+    "supplies": ["1500 food packs", "100 generators", "400 tarps"],
+    "conditions": "Strong winds, potential power outages"
+  },
+  "wildfire": {
+    "shelters": ["Shelter G: 700 capacity, North Valley", "Shelter H: 300 capacity, South Ridge"],
+    "supplies": ["600 water bottles", "200 respirators", "500 evacuation kits"],
+    "conditions": "Dry conditions, high fire spread risk"
+  }
+}
