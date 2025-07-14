@@ -6,6 +6,7 @@ export default async function handler(req, res) {
   }
 
   const { message, sessionId, disasterType } = req.body;
+  const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://localhost:8000';
 
   try {
     if (!sessionId) {
@@ -28,20 +29,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing disasterType or message' });
     }
 
-    // Send request to FastAPI microservice
-    const response = await axios.post('http://localhost:8000/disaster-response', {
+    const response = await axios.post(`${fastApiUrl}/disaster-response`, {
       disaster_type: disasterType,
       query: message,
       session_id: sessionId
     }, {
-      timeout: 30000 // 30-second timeout for API call
+      timeout: 30000
     });
 
-    // Return agent outputs as chat messages
     return res.status(200).json({
       messages: response.data.messages
     });
-
   } catch (error) {
     console.error('Error calling FastAPI microservice:', error.message);
     if (error.response) {
