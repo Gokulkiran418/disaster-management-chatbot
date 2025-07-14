@@ -2,15 +2,12 @@ from crewai import Agent
 from dotenv import load_dotenv
 import os
 
-# Load environment variables
 load_dotenv()
 
-# Verify OpenAI API key is available
 openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
     raise ValueError("OPENAI_API_KEY not found in .env file")
 
-# Define CrewAI agents
 planner_agent = Agent(
     role="Disaster Response Planner",
     goal="Design a step-by-step strategy for disaster response based on user input and disaster type.",
@@ -47,7 +44,6 @@ communicator_agent = Agent(
     llm="gpt-4o"
 )
 
-# Export agents for use in FastAPI microservice
 agents = {
     "planner": planner_agent,
     "researcher": researcher_agent,

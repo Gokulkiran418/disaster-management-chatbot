@@ -1,26 +1,21 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from crewai import Crew, Task
-from src.python_api.agents import agents
+from agents import agents
 import json
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
-# Verify OpenAI API key
 if not os.getenv("OPENAI_API_KEY"):
     raise ValueError("OPENAI_API_KEY not found in .env file")
 
-# Initialize FastAPI app
 app = FastAPI()
 
-# Load mock disaster data
-with open("src/data/disaster-data.json", "r") as file:
+with open("api/data/disaster-data.json", "r") as file:
     disaster_data = json.load(file)
 
-# Pydantic model for request body
 class DisasterRequest(BaseModel):
     disaster_type: str
     query: str
@@ -33,11 +28,9 @@ async def disaster_response(request: DisasterRequest):
         query = request.query
         session_id = request.session_id
 
-        # Validate disaster type
         if disaster_type not in disaster_data:
             raise HTTPException(status_code=400, detail="Invalid disaster type")
 
-        # Define tasks for each agent
         planner_task = Task(
             description=f"Design a step-by-step strategy for responding to a {disaster_type} with user request: {query}",
             agent=agents["planner"],
@@ -62,17 +55,14 @@ async def disaster_response(request: DisasterRequest):
             expected_output="A public announcement message."
         )
 
-        # Create Crew with agents and tasks
         crew = Crew(
             agents=[agents["planner"], agents["researcher"], agents["logistics"], agents["communicator"]],
             tasks=[planner_task, researcher_task, logistics_task, communicator_task],
             verbose=True
         )
 
-        # Run the workflow
         result = crew.kickoff()
 
-        # Format agent outputs as chat messages with nested text structure
         messages = [
             {"text": {"text": str(planner_task.output)}, "sender": "planner"},
             {"text": {"text": str(researcher_task.output)}, "sender": "researcher"},
@@ -85,7 +75,6 @@ async def disaster_response(request: DisasterRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
 
-# Health check endpoint
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
