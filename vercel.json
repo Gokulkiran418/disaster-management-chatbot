@@ -7,7 +7,7 @@
       "config": { "maxLambdaSize": "50mb" }
     },
     {
-      "src": "src/**/*",
+      "src": "package.json",
       "use": "@vercel/next"
     }
   ],
@@ -18,7 +18,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "src/$1"
+      "dest": "/"
     }
   ]
 }
