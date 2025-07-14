@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from crewai import Crew, Task
-from agents import agents
+from api.agents import agents
 import json
 import os
 from dotenv import load_dotenv

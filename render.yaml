@@ -11,7 +11,7 @@ services:
     name: disaster-response-frontend
     plan: free
     runtime: node
-    repo: https://github.com/your-username/your-repo
+    repo: https://github.com/Gokulkiran418/disaster-management-chatbot.git
     branch: main
     buildCommand: "cd src && npm install && npm run build"
     startCommand: "cd src && npm start"
