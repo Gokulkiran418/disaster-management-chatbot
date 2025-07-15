@@ -1,145 +1,295 @@
 import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, Loader } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import GridDistortion from '../components/GridDistortion';
+import BlurText from "../components/BlurText";
 
-function renderMessage(msg) {
-  // Handle varying message formats
-  const text = typeof msg.text === 'string' ? msg.text : msg.text?.text || 'No response available';
-  return text.split('\n').map((line, index) => (
-    <p key={index} className="text-xs sm:text-sm">{line}</p>
-  ));
+const handleAnimationComplete = () => {
+  console.log('Animation completed!');
+};
+
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.2,
+    },
+  },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+};
+
+function BrainSpinner() {
+  return (
+    <motion.div
+      className="w-4 h-4 rounded-full bg-accent"
+      animate={{ scale: [1, 1.6, 1], opacity: [0.8, 1, 0.8] }}
+      transition={{ repeat: Infinity, duration: 1, ease: 'easeInOut' }}
+    />
+  );
 }
 
-export default function Home() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+
+function QueryComponent({ onSendQuery, isProcessing }) {
   const [disasterType, setDisasterType] = useState('');
-  const [sessionId] = useState(Math.random().toString(36).substring(2));
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
+  const [input, setInput] = useState('');
+  const [sentQueries, setSentQueries] = useState([]);
 
-  // Disaster types for dropdown
-  const disasterTypes = ['Earthquake', 'Flood', 'Hurricane', 'Wildfire'];
-
-  // Auto-scroll to the latest message
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // Scroll input into view when focused
-  const handleInputFocus = () => {
-    setTimeout(() => {
-      inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
-  };
-
-  // Start conversation with welcome message
-  useEffect(() => {
-    const startConversation = async () => {
-      const response = await fetch('/api/chatbot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: '[START]', sessionId }),
-      });
-      const data = await response.json();
-      if (data.messages) {
-        setMessages(data.messages.map(msg => ({ ...msg, sender: 'bot' })));
-      }
+  const handleSend = () => {
+    if (!disasterType || !input.trim()) return;
+    const query = {
+      disasterType,
+      query: input,
+      timestamp: new Date().toLocaleString(),
     };
-    startConversation();
-  }, [sessionId]);
-
-  const sendMessage = async () => {
-    if (!input.trim() || !disasterType) return;
-
-    const userMessage = { text: { text: input }, sender: 'user' };
-    setMessages((prev) => [...prev, userMessage]);
+    setSentQueries((prev) => [...prev, query]);
+    onSendQuery(disasterType, input);
     setInput('');
-
-    const response = await fetch('/api/chatbot', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: input, sessionId, disasterType }),
-    });
-    const data = await response.json();
-    if (data.messages) {
-      setMessages((prev) => [...prev, ...data.messages]);
-    } else if (data.error) {
-      setMessages((prev) => [...prev, { text: { text: data.error }, sender: 'bot' }]);
-    }
-
-    scrollToBottom();
-  };
-
-  // Handle dropdown selection
-  const handleDisasterSelect = (e) => {
-    setDisasterType(e.target.value);
   };
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-black">
-      <header className="p-2 bg-gray-900 text-white flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-2">
-        <h1 className="text-base sm:text-lg font-bold text-center">Disaster Response Coordinator</h1>
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      className="component-card border border-accent shadow-lg p-6 space-y-6 bg-primary backdrop-blur-xl"
+    >
+      <h2 className="text-2xl font-extrabold text-text text-center mb-4">
+        🌐 Disaster Query Panel
+      </h2>
+
+      <div className="grid grid-cols-1 sm:grid-cols-[2fr_4fr_1fr] gap-4">
         <select
-          onChange={handleDisasterSelect}
           value={disasterType}
-          className="p-1 text-xs sm:text-sm bg-gray-800 text-white border border-gray-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 w-full sm:w-40"
-          aria-label="Disaster Types"
+          onChange={(e) => setDisasterType(e.target.value)}
+          className="p-4 text-lg bg-white/60 text-text border border-accent rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-light"
+          disabled={isProcessing}
         >
-          <option value="" disabled>Select Disaster Type</option>
-          {disasterTypes.map((type, index) => (
-            <option key={index} value={type}>{type}</option>
+          <option value="" disabled>
+            Select Disaster Type
+          </option>
+          {['Earthquake', 'Tsunami', 'Flood', 'Hurricane', 'Wildfire'].map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
           ))}
         </select>
-      </header>
-      <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-3 sm:space-y-4 bg-gray-950">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[85%] sm:max-w-[80%] p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${
-                msg.sender === 'user'
-                  ? 'bg-blue-700 text-white'
-                  : msg.sender === 'planner'
-                  ? 'bg-green-700 text-white'
-                  : msg.sender === 'researcher'
-                  ? 'bg-purple-700 text-white'
-                  : msg.sender === 'logistics'
-                  ? 'bg-orange-700 text-white'
-                  : msg.sender === 'communicator'
-                  ? 'bg-teal-700 text-white'
-                  : 'bg-gray-800 text-white shadow-lg'
-              }`}
-            >
-              {msg.sender !== 'user' && (
-                <p className="text-[10px] sm:text-xs font-bold capitalize">{msg.sender}</p>
-              )}
-              {renderMessage(msg)}
-            </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-      <div className="p-2 bg-gray-900 border-t border-gray-700 flex sticky bottom-0 z-10">
+
         <input
-          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-          onFocus={handleInputFocus}
-          className="flex-1 p-2 text-xs sm:text-sm bg-gray-800 text-white border border-gray-700 rounded-l-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-          placeholder="Type your disaster response query..."
-          aria-label="Chat input"
-          disabled={!disasterType}
+          placeholder="Ask a question..."
+          disabled={isProcessing}
+          className="p-4 text-lg bg-white/60 text-text border border-accent rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-light"
         />
-        <button
-          onClick={sendMessage}
-          className="p-2 text-xs sm:text-sm bg-blue-600 text-white rounded-r-md hover:bg-blue-700 disabled:bg-gray-600"
-          disabled={!input.trim() || !disasterType}
+
+        <motion.button
+          onClick={handleSend}
+          disabled={isProcessing || !disasterType || !input.trim()}
+          className="bg-accent hover:bg-accent-light text-white rounded-lg flex items-center justify-center p-4 disabled:bg-gray-400"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
-          Send
-        </button>
+          <Send className="w-5 h-5" />
+        </motion.button>
+      </div>
+
+      <div className="max-h-40 overflow-y-auto mt-4 bg-white/40 p-4 rounded-lg">
+        <h3 className="text-lg font-semibold text-text mb-2">Sent Queries</h3>
+        <ul className="space-y-2 text-sm text-text">
+          {sentQueries.map((q, index) => (
+            <li key={index} className="border-b border-accent/30 pb-1">
+              <span className="font-medium">{q.timestamp}</span>: {q.disasterType} — {q.query}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </motion.div>
+  );
+}
+
+// Updated AgentWorkingComponent
+function AgentWorkingComponent({ statuses }) {
+  return (
+    <motion.div variants={cardVariants} className="component-card">
+      <h3 className="text-lg font-bold text-text mb-4">Agent Status</h3>
+
+      {Object.entries(statuses).length > 0 ? (
+        Object.entries(statuses).map(([agent, status]) => (
+          <motion.div
+            key={agent}
+            className="flex items-center justify-between text-base text-text py-2"
+          >
+            <div className="flex items-center space-x-3">
+              {status === 'idle' && <BrainSpinner />}
+              <span className="font-semibold text-lg">
+                {agent.charAt(0).toUpperCase() + agent.slice(1)}:
+              </span>
+            </div>
+
+            <span
+              className={`capitalize font-medium ${
+                status === 'completed'
+                  ? 'text-green-500'
+                  : status === 'idle'
+                  ? 'text-yellow-500'
+                  : 'text-gray-400'
+              }`}
+            >
+              {status}
+            </span>
+          </motion.div>
+        ))
+      ) : (
+        <div className="flex items-center space-x-2 text-text">
+          <BrainSpinner />
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+
+// --- Modified AgentResultsComponent ---
+function AgentResultsComponent({ results, error }) {
+  const isEmpty = !error && Object.keys(results).length === 0;
+
+  if (isEmpty) {
+    return (
+      <motion.div variants={cardVariants} className="component-card bg-primary/80 backdrop-blur-md">
+        <div className="space-y-4 animate-pulse">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-4 bg-gray-500/30 rounded w-3/4"></div>
+          ))}
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div variants={cardVariants} className="component-card bg-primary/80 backdrop-blur-md">
+      <h3 className="text-lg font-bold text-text mb-4">Agent Results</h3>
+      {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
+      {Object.entries(results).map(([agent, result]) => (
+      <motion.div
+      key={agent}
+      className="p-5 bg-primary rounded-xl mb-6 shadow border border-accent/30"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <h4 className="text-4xl font-extrabold text-accent bg-white/10 px-4 py-2 rounded-lg mb-4 shadow">
+        {agent.charAt(0).toUpperCase() + agent.slice(1)}
+      </h4>
+      <div className="prose prose-invert text-text text-sm max-w-none">
+        <ReactMarkdown>{result}</ReactMarkdown>
+      </div>
+    </motion.div>
+
+      ))}
+    </motion.div>
+  );
+}
+
+
+
+export default function Home() {
+  const [sessionId] = useState(Math.random().toString(36).substring(2));
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [statuses, setStatuses] = useState({});
+  const [results, setResults] = useState({});
+  const [error, setError] = useState('');
+  const intervalRef = useRef(null);
+
+  const fetchStatus = async () => {
+    try {
+      const res = await fetch(`/api/status/${sessionId}`);
+      if (!res.ok) throw new Error('Status fetch failed');
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+        setIsProcessing(false);
+        clearInterval(intervalRef.current);
+        return;
+      }
+      setStatuses(data.agents || {});
+      if (data.status === 'completed') {
+        setResults(data.results || {});
+        setIsProcessing(false);
+        clearInterval(intervalRef.current);
+      } else if (data.status === 'failed') {
+        setError(data.error || 'Processing failed');
+        setIsProcessing(false);
+        clearInterval(intervalRef.current);
+      }
+    } catch (err) {
+      setError('Failed to fetch status');
+      setIsProcessing(false);
+      clearInterval(intervalRef.current);
+    }
+  };
+
+  const handleSendQuery = async (disasterType, query) => {
+    setIsProcessing(true);
+    setStatuses({});
+    setResults({});
+    setError('');
+    const res = await fetch('/api/chatbot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: query, sessionId, disasterType }),
+    });
+    if (res.ok) {
+      intervalRef.current = setInterval(fetchStatus, 10000);
+    } else {
+      setError('Failed to send');
+      setIsProcessing(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  return (
+    <div className="min-h-screen relative overflow-hidden">
+      <GridDistortion
+        imageSrc="/worldmap.jpg"
+        grid={10}
+        mouse={0.1}
+        strength={0.15}
+        relaxation={0.9}
+      />
+
+      <div className="relative z-10 container">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-6"
+        >
+          <BlurText
+            text="Disaster Response AI Agents"
+            delay={150}
+            animateBy="words"
+            direction="top"
+            onAnimationComplete={handleAnimationComplete}
+            textSizeClass="text-6xl sm:text-7xl md:text-8xl font-extrabold"
+            className="mb-12 text-6xl flex justify-center"
+          />
+          <QueryComponent onSendQuery={handleSendQuery} isProcessing={isProcessing} />
+          {isProcessing && <AgentWorkingComponent statuses={statuses} />}
+          {(isProcessing || Object.keys(results).length > 0 || error) && (
+            <AgentResultsComponent results={results} error={error} />
+          )}
+        </motion.div>
       </div>
     </div>
   );
