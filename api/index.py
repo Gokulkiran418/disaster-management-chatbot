@@ -1,80 +1,100 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
 from crewai import Crew, Task
-from api.agents import agents
+from .agents import agents
 import json
 import os
 from dotenv import load_dotenv
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
-
-if not os.getenv("OPENAI_API_KEY"):
-    raise ValueError("OPENAI_API_KEY not found in .env file")
-
 app = FastAPI()
 
-with open("api/data/disaster-data.json", "r") as file:
-    disaster_data = json.load(file)
+statuses = {}
 
 class DisasterRequest(BaseModel):
     disaster_type: str
     query: str
     session_id: str
 
-@app.post("/disaster-response")
-async def disaster_response(request: DisasterRequest):
-    try:
-        disaster_type = request.disaster_type.lower()
-        query = request.query
-        session_id = request.session_id
-
-        if disaster_type not in disaster_data:
-            raise HTTPException(status_code=400, detail="Invalid disaster type")
-
-        planner_task = Task(
-            description=f"Design a step-by-step strategy for responding to a {disaster_type} with user request: {query}",
-            agent=agents["planner"],
-            expected_output="A list of steps for disaster response."
-        )
-
-        researcher_task = Task(
-            description=f"Gather data on shelters, supplies, and conditions for a {disaster_type} in the affected area based on user request: {query}. Use mock data: {json.dumps(disaster_data[disaster_type])}",
-            agent=agents["researcher"],
-            expected_output="A summary of available shelters, supplies, and conditions."
-        )
-
-        logistics_task = Task(
-            description=f"Plan resource distribution based on the Planner's strategy and Researcher's data for a {disaster_type}. User request: {query}",
-            agent=agents["logistics"],
-            expected_output="A resource distribution plan."
-        )
-
-        communicator_task = Task(
-            description=f"Draft a clear and empathetic public announcement based on the Planner's strategy and Logistics plan for a {disaster_type}. User request: {query}",
-            agent=agents["communicator"],
-            expected_output="A public announcement message."
-        )
-
-        crew = Crew(
-            agents=[agents["planner"], agents["researcher"], agents["logistics"], agents["communicator"]],
-            tasks=[planner_task, researcher_task, logistics_task, communicator_task],
-            verbose=True
-        )
-
-        result = crew.kickoff()
-
-        messages = [
-            {"text": {"text": str(planner_task.output)}, "sender": "planner"},
-            {"text": {"text": str(researcher_task.output)}, "sender": "researcher"},
-            {"text": {"text": str(logistics_task.output)}, "sender": "logistics"},
-            {"text": {"text": str(communicator_task.output)}, "sender": "communicator"}
-        ]
-
-        return {"messages": messages}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
-
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+async def run_crew(session_id, disaster_type, query):
+    try:
+        with open("api/data/disaster-data.json", "r") as file:
+            disaster_data = json.load(file)
+
+        if disaster_type not in disaster_data:
+            statuses[session_id]['status'] = 'failed'
+            statuses[session_id]['error'] = "Invalid disaster type"
+            logger.error("Invalid disaster type")
+            return
+
+        def on_task_start(task, agent_name):
+            statuses[session_id]['agents'][agent_name] = 'processing'
+            logger.debug(f"Task started for {agent_name}")
+
+        def on_task_complete(task, agent_name):
+            logger.debug(f"Task output type: {type(task)}")
+            logger.debug(f"Task output attributes: {dir(task)}")
+            try:
+                output = str(task.raw) if task.raw else "No output"
+            except AttributeError:
+                output = "No output available"
+            statuses[session_id]['agents'][agent_name] = 'completed'
+            statuses[session_id]['results'][agent_name] = output
+            logger.debug(f"Task completed for {agent_name}: {output}")
+            if all(status == 'completed' for status in statuses[session_id]['agents'].values()):
+                statuses[session_id]['status'] = 'completed'
+
+        tasks = []
+        for agent_name, agent in agents.items():
+            task = Task(
+                description=f"{agent_name.capitalize()} for {disaster_type}: {query}",
+                agent=agent,
+                expected_output=f"{agent_name} output",
+                callback=lambda t, name=agent_name: (on_task_start(t, name), on_task_complete(t, name))[-1]
+            )
+            tasks.append(task)
+
+        crew = Crew(
+            agents=list(agents.values()),
+            tasks=tasks,
+            verbose=True
+        )
+
+        result = await crew.kickoff_async()
+        if not result:
+            statuses[session_id]['status'] = 'failed'
+            statuses[session_id]['error'] = "Crew execution returned no result"
+            logger.error("Crew execution returned no result")
+    except Exception as e:
+        logger.error(f"Crew execution failed: {str(e)}", exc_info=True)
+        statuses[session_id]['status'] = 'failed'
+        statuses[session_id]['error'] = str(e)
+
+@app.post("/disaster-response")
+async def disaster_response(request: DisasterRequest, background_tasks: BackgroundTasks):
+    session_id = request.session_id
+    disaster_type = request.disaster_type.lower()
+    query = request.query
+
+    statuses[session_id] = {
+        'status': 'processing',
+        'agents': {agent: 'idle' for agent in agents.keys()},
+        'results': {}
+    }
+
+    background_tasks.add_task(run_crew, session_id, disaster_type, query)
+    return {"message": "Processing started"}
+
+@app.get("/status/{session_id}")
+async def get_status(session_id: str):
+    if session_id not in statuses:
+        return {"error": "Session not found"}
+    return statuses[session_id]
