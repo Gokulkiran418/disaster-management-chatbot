@@ -1,3 +1,4 @@
+// src/pages/api/chatbot.js
 import axios from 'axios';
 
 export default async function handler(req, res) {
@@ -33,17 +34,15 @@ export default async function handler(req, res) {
       disaster_type: disasterType,
       query: message,
       session_id: sessionId
-    }, {
-      timeout: 30000
-    });
+    }, { timeout: 120000 }); // Increased to 120 seconds
 
     return res.status(200).json({
       messages: response.data.messages
     });
   } catch (error) {
-    console.error('Error calling FastAPI microservice:', error.message);
+    console.error('Error calling FastAPI:', error.message, error.response?.data);
     if (error.response) {
-      return res.status(error.response.status).json({ error: error.response.data.detail || 'FastAPI error' });
+      return res.status(error.response.status).json({ error: error.response.data?.detail || 'FastAPI error', raw: error.response.data });
     }
     return res.status(500).json({ error: `Failed to process request: ${error.message}` });
   }
