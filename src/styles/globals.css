@@ -1,28 +1,83 @@
-@import "tailwindcss";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+
+/* Reset & layout */
+html, body, #__next {
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Responsive container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Theme colors using CSS variables */
+:root {
+  --primary-bg: rgba(241, 250, 238, 0.8); /* Soft white */
+  --text-color: #1d3557;                  /* Dark blue */
+  --accent-color: #457b9d;                /* Medium blue */
+  --accent-light: #a8dadc;                /* Light blue */
+}
+
+/* Tailwind-compatible utility layer for theme */
+@layer utilities {
+  .bg-primary {
+    background-color: var(--primary-bg);
+  }
+  .text-text {
+    color: var(--text-color);
+  }
+  .bg-accent {
+    background-color: var(--accent-color);
+  }
+  .bg-accent-light {
+    background-color: var(--accent-light);
+  }
+  .text-accent-light {
+    color: var(--accent-light);
+  }
+  .border-accent {
+    border-color: var(--accent-color);
+  }
+  .focus\:ring-accent-light:focus {
+    --tw-ring-color: var(--accent-light);
+  }
+}
+
+/* Glow text for main heading */
+.glow-text {
+  text-shadow: 0 0 10px rgba(69, 123, 157, 0.5);
+}
+
+/* Reusable card layout */
+.component-card {
+  background: var(--primary-bg);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+@media (max-width: 768px) {
+  .component-card {
+    padding: 1rem;
+  }
 }
