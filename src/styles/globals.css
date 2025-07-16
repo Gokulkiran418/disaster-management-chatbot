@@ -14,7 +14,9 @@ html, body, #__next {
   padding: 0;
   box-sizing: border-box;
 }
-
+.results-container {
+  background: rgba(241, 250, 238, 0.6); /* 60% opacity for more transparency */
+}
 
 /* Responsive container */
 .container {
