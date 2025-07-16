@@ -14,19 +14,16 @@ html, body, #__next {
   padding: 0;
   box-sizing: border-box;
 }
-.results-container {
-  background: rgba(241, 250, 238, 0.6); /* 60% opacity for more transparency */
-}
 
 /* Responsive container */
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem; /* Added padding for breathing room */
 }
 @media (max-width: 768px) {
   .container {
-    padding: 1rem;
+    padding: 0.5rem; /* Reduced padding on mobile */
   }
 }
 
@@ -68,18 +65,26 @@ html, body, #__next {
   text-shadow: 0 0 10px rgba(69, 123, 157, 0.5);
 }
 
-/* Reusable card layout */
+/* Reusable card layout (base style, allow overrides) */
 .component-card {
-  background: var(--primary-bg);
-  backdrop-filter: blur(10px);
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
+
 @media (max-width: 768px) {
   .component-card {
     padding: 1rem;
+  }
+  .container {
+    padding: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-cols-2 {
+    grid-template-columns: 1fr;
   }
 }
