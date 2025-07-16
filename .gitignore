@@ -181,3 +181,6 @@ dist
 # Python virtual environment
 venv/
 __pycache__/
+
+
+command.txt
