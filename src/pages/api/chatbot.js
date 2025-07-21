@@ -16,13 +16,7 @@ export default async function handler(req, res) {
 
     if (message === '[START]') {
       return res.status(200).json({
-        messages: [
-          {
-            text: {
-              text: 'Welcome to the Disaster Response Coordinator! Select a disaster type (e.g., Earthquake, Flood) and describe your needs (e.g., Evacuate 500 people).'
-            }
-          }
-        ]
+        message: 'Welcome to the Disaster Response Coordinator! Select a disaster type (e.g., Earthquake, Flood) and describe your needs (e.g., Evacuate 500 people).',
       });
     }
 
@@ -30,19 +24,26 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing disasterType or message' });
     }
 
-    const response = await axios.post(`${fastApiUrl}/disaster-response`, {
-      disaster_type: disasterType,
-      query: message,
-      session_id: sessionId
-    }, { timeout: 120000 }); // Increased to 120 seconds
+    const response = await axios.post(
+      `${fastApiUrl}/disaster-response`,
+      {
+        query: message,
+        session_id: sessionId,
+        disaster_type: disasterType,
+      },
+      { timeout: 120000 } // 120 seconds
+    );
+    console.log('Backend chatbot response:', response.data); // Debug
 
-    return res.status(200).json({
-      messages: response.data.messages
-    });
+    // Return the backend's response directly
+    return res.status(200).json({ message: response.data.message });
   } catch (error) {
     console.error('Error calling FastAPI:', error.message, error.response?.data);
     if (error.response) {
-      return res.status(error.response.status).json({ error: error.response.data?.detail || 'FastAPI error', raw: error.response.data });
+      return res.status(error.response.status).json({
+        error: error.response.data?.detail || 'FastAPI error',
+        raw: error.response.data,
+      });
     }
     return res.status(500).json({ error: `Failed to process request: ${error.message}` });
   }
