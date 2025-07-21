@@ -1,86 +1,73 @@
-import React, { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import PropTypes from 'prop-types';
+// src/components/AgentWorkingComponent.js
+import { motion, AnimatePresence } from 'framer-motion';
+import { Check } from 'lucide-react';
+import { cardVariants } from './variants';
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
-};
+function BrainSpinner() {
+  return (
+    <motion.div
+      className="w-5 h-5 rounded-full bg-accent"
+      animate={{ scale: [1, 1.6, 1], opacity: [0.8, 1, 0.8] }}
+      transition={{ repeat: Infinity, duration: 1, ease: 'easeInOut' }}
+    />
+  );
+}
 
-const BrainSpinner = ({ active }) => (
-  <motion.div
-    className={`w-4 h-4 rounded-full bg-accent ${active ? 'animate-pulse' : ''}`}
-    animate={active ? { scale: [1, 1.4, 1] } : { scale: 1 }}
-    transition={active ? { repeat: Infinity, duration: 0.8 } : { duration: 0 }}
-  />
-);
+function AgentWorkingComponent({ statuses }) {
+  const agentEmojis = {
+    'Disaster Response Planner': '🧑‍🚒',
+    'Disaster Data Researcher': '📊',
+    'Logistics Coordinator': '🚚',
+    'Public Communicator': '📣',
+  };
 
-BrainSpinner.propTypes = {
-  active: PropTypes.bool.isRequired,
-};
-
-const AgentWorkingComponent = ({ statuses }) => (
-  <motion.div
-    variants={cardVariants}
-    initial="hidden"
-    animate="visible"
-    className="bg-primary backdrop-blur-md rounded-xl shadow-md p-4"
-  >
-    <h3 className="text-lg font-bold text-text mb-4">Agent Status</h3>
-    {statuses.length > 0 ? (
-      <ul className="font-mono text-sm text-white bg-black/30 p-4 rounded space-y-3">
-        <li key="crew">Crew: crew</li>
-        {statuses.map((task, index) => (
-          <li key={`${task.agent}-${task.id}`}>
-            <div className="flex items-center space-x-2">
-              {index === statuses.length - 1 ? '└──' : '├──'}
-              <span>📋 Task: {task.id}</span>
-            </div>
-            <div className="flex items-center space-x-2 ml-4">
-              <span>│</span>
-              <span>Assigned to: {task.agent}</span>
-            </div>
-            <div className="flex items-center space-x-2 ml-4">
-              <span>│</span>
-              <span className="flex items-center space-x-1">
-                <BrainSpinner active={task.status === 'processing'} />
-                <span
-                  className={task.status === 'completed' ? 'text-green-400' : 'text-yellow-400'}
-                >
-                  {task.status === 'completed' ? '✅ Completed' : '⏳ Processing'}
-                </span>
-              </span>
-            </div>
-            {task.working && (
-              <div className="ml-8 text-green-300 italic">└── ⚙️ {task.working}</div>
-            )}
-            {task.thinking && (
-              <div className="ml-8 text-blue-300 italic">└── 🧠 {task.thinking}</div>
-            )}
-          </li>
-        ))}
-      </ul>
-    ) : (
-      <div className="bg-primary backdrop-blur-md rounded-xl shadow-md p-4">
-        <div className="flex items-center space-x-2 text-text">
-          <BrainSpinner active />
-          <p>Waiting for agent activity...</p>
+  return (
+    <motion.div
+      variants={cardVariants}
+      className="component-card bg-primary/70 backdrop-blur-md p-6 rounded-xl shadow-lg"
+    >
+      <h3 className="text-2xl font-extrabold text-text mb-6 flex items-center gap-2">
+        <span className="animate-pulse">🚀</span> Agent Mission Control
+      </h3>
+      {statuses.length > 0 ? (
+        <div className="space-y-4">
+          <AnimatePresence>
+            {statuses.map((task, index) => (
+              <motion.div
+                key={task.id}
+                className="flex items-center gap-3 text-text"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+              >
+                {task.status === 'Completed' ? (
+                  <>
+                    <Check className="w-5 h-5 text-green-500" />
+                    <span className="text-lg">
+                      {agentEmojis[task.agent] || '🤖'} {task.agent} completed thinking
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <BrainSpinner />
+                    <span className="text-lg">
+                      {agentEmojis[task.agent] || '🤖'} {task.agent} is thinking...
+                    </span>
+                  </>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
-      </div>
-    )}
-  </motion.div>
-);
+      ) : (
+        <div className="flex items-center gap-3 text-text">
+          <BrainSpinner />
+          <p className="text-lg animate-bounce">Gearing up agents...</p>
+        </div>
+      )}
+    </motion.div>
+  );
+}
 
-AgentWorkingComponent.propTypes = {
-  statuses: PropTypes.arrayOf(
-    PropTypes.shape({
-      agent: PropTypes.string.isRequired,
-      id: PropTypes.string.isRequired,
-      status: PropTypes.string.isRequired,
-      working: PropTypes.string,
-      thinking: PropTypes.string,
-    })
-  ).isRequired,
-};
-
-export default React.memo(AgentWorkingComponent);
+export default AgentWorkingComponent;

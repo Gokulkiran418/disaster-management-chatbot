@@ -1,101 +1,105 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+// src/pages/index.js
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import GridDistortion from '../components/GridDistortion';
+import BlurText from '../components/BlurText';
 import QueryComponent from '../components/QueryComponent';
 import AgentWorkingComponent from '../components/AgentWorkingComponent';
 import AgentResultsComponent from '../components/AgentResultsComponent';
-import GridDistortion from '../components/GridDistortion';
-import BlurText from '../components/BlurText';
+import { containerVariants } from '../components/variants';
 
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.2 },
-  },
-};
-
-const fadeVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.5 } },
+const handleAnimationComplete = () => {
+  console.log('Animation completed!');
 };
 
 export default function Home() {
-  const [sessionId] = useState(Math.random().toString(36).substring(2));
+  const [sessionId] = useState(() => {
+    const id = Math.random().toString(36).substring(2);
+    console.log('Generated sessionId:', id); // Debug sessionId
+    return id;
+  });
   const [isProcessing, setIsProcessing] = useState(false);
-  const [updates, setUpdates] = useState([]);
+  const [statuses, setStatuses] = useState([]);
   const [results, setResults] = useState({});
   const [error, setError] = useState('');
-  const eventSourceRef = useRef(null);
-  const updatesContainerRef = useRef(null);
+  const intervalRef = useRef(null);
 
-  useEffect(() => {
-    if (!isProcessing) return undefined;
-
-    const timer = setTimeout(() => {
-      const es = new EventSource(`http://localhost:8000/stream/${sessionId}`);
-      eventSourceRef.current = es;
-
-      es.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if (data.error || data.overall) {
-          if (data.error) setError(data.error);
-          setIsProcessing(false);
-          es.close();
-          return;
-        }
-        if (data.agent) {
-          setUpdates((prev) => {
-            const idx = prev.findIndex((u) => u.agent === data.agent);
-            if (idx > -1) {
-              const copy = [...prev];
-              copy[idx] = { ...copy[idx], ...data };
-              return copy;
-            }
-            return [...prev, data];
-          });
-          if (data.result) {
-            setResults((prev) => ({ ...prev, [data.agent]: data.result }));
-          }
-          if (updatesContainerRef.current) {
-            updatesContainerRef.current.scrollTop = updatesContainerRef.current.scrollHeight;
-          }
-        }
-      };
-
-      es.onerror = () => {
-        setError('Stream error');
-        setIsProcessing(false);
-        es.close();
-      };
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
+  const fetchStatus = async () => {
+    try {
+      console.log('Fetching status for sessionId:', sessionId); // Debug
+      const res = await fetch(`/api/status/${sessionId}`);
+      if (!res.ok) {
+        throw new Error(`Status fetch failed: ${res.status} ${res.statusText}`);
       }
-    };
-  }, [isProcessing, sessionId]);
+      const data = await res.json();
+      console.log('Raw status response:', JSON.stringify(data, null, 2)); // Detailed debug
+      if (data.error) {
+        console.warn('Status error from backend:', data.error);
+        setError(data.error);
+        setIsProcessing(false);
+        clearInterval(intervalRef.current);
+        return;
+      }
+      const tasks = Object.entries(data.agents || {})
+        .filter(([_, status]) => status !== 'idle') // Exclude idle agents
+        .map(([agent, status]) => ({
+          id: data.task_ids?.[agent] || 'unknown',
+          agent,
+          status: status.charAt(0).toUpperCase() + status.slice(1),
+        }));
+      console.log('Parsed tasks:', tasks); // Debug tasks
+      setStatuses(tasks);
+      if (data.status === 'completed') {
+        console.log('Results received:', data.results); // Debug results
+        setResults(data.results || {});
+        setIsProcessing(false);
+        clearInterval(intervalRef.current);
+      } else if (data.status === 'failed') {
+        console.warn('Processing failed:', data.error || 'Unknown error');
+        setError(data.error || 'Processing failed');
+        setIsProcessing(false);
+        clearInterval(intervalRef.current);
+      }
+    } catch (err) {
+      console.error('Fetch status error:', err.message);
+      setError(`Failed to fetch status: ${err.message}`);
+      setIsProcessing(false);
+      clearInterval(intervalRef.current);
+    }
+  };
 
-  const handleSendQuery = useCallback(async (disasterType, query) => {
+  const handleSendQuery = async (disasterType, query) => {
     setIsProcessing(true);
-    setUpdates([]);
+    setStatuses([]);
     setResults({});
     setError('');
     try {
-      await fetch('/api/chatbot', {
+      console.log('Sending query with sessionId:', sessionId); // Debug
+      const res = await fetch('/api/chatbot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: query, sessionId, disasterType }),
       });
-    } catch (err) {
-      setError('Failed to send query');
+      if (!res.ok) {
+        throw new Error(`Query submission failed: ${res.status} ${res.statusText}`);
+      }
+      const data = await res.json();
+      console.log('Chatbot response:', data); // Debug
+      // Delay polling to allow backend to initialize tasks
+      setTimeout(() => {
+        intervalRef.current = setInterval(fetchStatus, 1000); // 1s polling
+      }, 1000); // 1s initial delay
+    } catch (error) {
+      console.error('Query error:', error.message);
+      setError(`Failed to send query: ${error.message}`);
       setIsProcessing(false);
     }
-  }, [sessionId]);
+  };
 
-  const handleAnimationComplete = useCallback(() => {
-    console.log('Animation completed!');
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
   return (
@@ -107,29 +111,29 @@ export default function Home() {
         strength={0.15}
         relaxation={0.9}
       />
+
       <div className="relative z-10 container">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-2 gap-8"
+          className="space-y-6"
         >
-          <div className="flex flex-col gap-8 space-y-8">
-            <div className="my-4"> {/* Added margin-top and margin-bottom */}
-              <QueryComponent onSendQuery={handleSendQuery} isProcessing={isProcessing} />
-            </div>
-            <motion.div
-              variants={fadeVariants}
-              initial="hidden"
-              animate={isProcessing ? "visible" : "hidden"}
-              className="max-h-96 overflow-y-auto my-4" 
-            > {/* Added margin-top and margin-bottom */}
-              <AgentWorkingComponent statuses={updates} />
-            </motion.div>
-          </div>
-          <div className="my-4"> {/* Added margin-top and margin-bottom */}
+          <BlurText
+            text="Disaster Response AI Agents"
+            delay={150}
+            animateBy="words"
+            direction="top"
+            onAnimationComplete={handleAnimationComplete}
+            textSizeClass="text-6xl sm:text-7xl md:text-8xl font-extrabold"
+            className="mb-12 text-6xl flex justify-center"
+          />
+          <QueryComponent onSendQuery={handleSendQuery} isProcessing={isProcessing} />
+          {isProcessing ? (
+            <AgentWorkingComponent statuses={statuses} />
+          ) : (
             <AgentResultsComponent results={results} error={error} />
-          </div>
+          )}
         </motion.div>
       </div>
     </div>
